@@ -27,9 +27,7 @@
 </head>
 <body>
   <h1>Claim Your MON</h1>
-  <!-- Кнопка для подключения кошелька -->
   <button id="connectButton">🔌 Connect Wallet</button>
-  <!-- Кнопка для клейма -->
   <button onclick="claim()">💸 Claim</button>
   <div id="status">Status: Not connected</div>
 
@@ -58,9 +56,9 @@
 
     let provider, signer, userAddress;
 
-    // Функция для подключения к кошельку
     async function connect() {
       if (window.ethereum) {
+        // Инициализация провайдера без изменения глобальной переменной ethereum
         provider = new ethers.BrowserProvider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = await provider.getSigner();
@@ -71,10 +69,8 @@
       }
     }
 
-    // Добавляем обработчик для кнопки подключения кошелька
     document.getElementById('connectButton').addEventListener('click', connect);
 
-    // Функция для клейма
     async function claim() {
       if (!signer || !userAddress) return alert("Please connect wallet first");
 
