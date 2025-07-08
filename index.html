@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Claim MON Airdrop</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.14.0/dist/ethers.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 100px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    #status {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Claim Your MON</h1>
+  <button onclick="connect()">🔌 Connect Wallet</button>
+  <button onclick="claim()">💸 Claim</button>
+  <div id="status">Status: Not connected</div>
+
+  <script>
+    const CONTRACT_ADDRESS = "0xfE8eDdBAC0B24672b8CF45408Ee7dE8e79FD0772";
+    const ABI = [
+      "function claim(uint256 amount, bytes32[] calldata merkleProof) external",
+    ];
+
+    const proofs = {
+      "0x60c4F6022834D676C001E393D59424d4787f31fC".toLowerCase(): {
+        amount: 11,
+        proof: ["cad0b516b6aea48221f14353a289d481098b1c20919cefcc533a035ae275da33",
+            "91290aca0379c38eac23dbdb3733127d834e9af21d861da4695ac143266951f3"]
+      },
+      "0x97b46641aaccaff5ddfcc447ba86fa26ee72bfe2": {
+        amount: 9,
+        proof: ["983c529b06a601fd41ab0de2e35dd205a719585e52baf714918cad6627264389",
+            "91290aca0379c38eac23dbdb3733127d834e9af21d861da4695ac143266951f3"]
+      },
+      "0x3dc71b0f42ef19d6be49525b6c7f6a0e92475cba": {
+        amount: 12,
+        proof: ["9e7ccd0f1c89b879b08c08e2f62402d9f3837083b982c3f1d64d354b8ae8c98e"]
+      }
+    };
+
+    let provider, signer, userAddress;
+
+    async function connect() {
+      if (window.ethereum) {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = await provider.getSigner();
+        userAddress = (await signer.getAddress()).toLowerCase();
+        document.getElementById("status").innerText = "Connected: " + userAddress;
+      } else {
+        alert("MetaMask not found");
+      }
+    }
+
+    async function claim() {
+      if (!signer || !userAddress) return alert("Please connect wallet first");
+
+      const entry = proofs[userAddress];
+      if (!entry) return alert("This address is not whitelisted.");
+
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+      try {
+        const tx = await contract.claim(entry.amount, entry.proof);
+        document.getElementById("status").innerText = "Claim sent: " + tx.hash;
+        await tx.wait();
+        document.getElementById("status").innerText = "✅ Successfully claimed!";
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status").innerText = "❌ Error: " + err.reason || err.message;
+      }
+    }
+  </script>
+</body>
+</html>
