@@ -1,99 +1,66 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Claim MON Airdrop</title>
+  <meta charset="utf-8">
+  <title>Monad Airdrop Claim</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f0f0f;
-      color: #f0f0f0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-top: 100px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      margin-top: 20px;
-    }
-    #status {
-      margin-top: 20px;
-    }
-  </style>
 </head>
 <body>
-  <h1>Claim Your MON</h1>
-  <button onclick="connect()">🔌 Connect Wallet</button>
-  <button onclick="claim()">💸 Claim</button>
-  <div id="status">Status: Not connected</div>
+  <h2>Monad Airdrop</h2>
+  <button id="connect">Connect Wallet</button>
+  <p id="wallet">Not connected</p>
+  <p id="claimable">Claimable: 0 MON</p>
+  <button id="claim" disabled>Claim</button>
 
   <script>
-    const CONTRACT_ADDRESS = "0xfE8eDdBAC0B24672b8CF45408Ee7dE8e79FD0772";
-    const ABI = [
-      "function claim(uint256 amount, bytes32[] calldata merkleProof) external",
+    const contractAddress = "ВСТАВЬ_АДРЕС_КОНТРАКТА";
+    const contractABI = [
+      "function claimable(address) view returns (uint256)",
+      "function claimed(address) view returns (bool)",
+      "function claim()"
     ];
 
-    const proofs = {
-      "0x60c4f6022834d676c001e393d59424d4787f31fc": {
-        amount: 11,
-        proof: [
-          "0xcad0b516b6aea48221f14353a289d481098b1c20919cefcc533a035ae275da33"
-        ]
-      },
-      "0x97b46641aaccaff5ddfcc447ba86fa26ee72bfe2": {
-        amount: 9,
-        proof: [
-          "0x983c529b06a601fd41ab0de2e35dd205a719585e52baf714918cad6627264389"
-        ]
-      },
-      "0x3dc71b0f42ef19d6be49525b6c7f6a0e92475cba": {
-        amount: 12,
-        proof: [
-          "0x9e7ccd0f1c89b879b08c08e2f62402d9f3837083b982c3f1d64d354b8ae8c98e"
-        ]
-      }
-    };
+    let provider, signer, contract, userAddress;
 
-    let provider, signer, userAddress;
+    async function connectWallet() {
+      if (!window.ethereum) return alert("MetaMask not found");
+      await ethereum.request({ method: 'eth_requestAccounts' });
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+      userAddress = await signer.getAddress();
+      document.getElementById('wallet').innerText = "Connected: " + userAddress;
 
-    async function connect() {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          provider = new ethers.providers.Web3Provider(window.ethereum);
-          signer = provider.getSigner();
-          userAddress = (await signer.getAddress()).toLowerCase();
-          document.getElementById("status").innerText = "Connected: " + userAddress;
-        } catch (e) {
-          console.error(e);
-          document.getElementById("status").innerText = "Connection failed.";
-        }
+      contract = new ethers.Contract(contractAddress, contractABI, signer);
+      await updateClaimable();
+    }
+
+    async function updateClaimable() {
+      const amount = await contract.claimable(userAddress);
+      const claimed = await contract.claimed(userAddress);
+      const mon = ethers.utils.formatEther(amount);
+      document.getElementById('claimable').innerText = `Claimable: ${mon} MON`;
+
+      const claimBtn = document.getElementById('claim');
+      if (amount.gt(0) && !claimed) {
+        claimBtn.disabled = false;
       } else {
-        alert("MetaMask not found");
+        claimBtn.disabled = true;
       }
     }
 
     async function claim() {
-      if (!signer || !userAddress) return alert("Please connect wallet first");
-
-      const entry = proofs[userAddress];
-      if (!entry) return alert("This address is not whitelisted.");
-
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
       try {
-        const tx = await contract.claim(entry.amount, entry.proof);
-        document.getElementById("status").innerText = "Claim sent: " + tx.hash;
+        const tx = await contract.claim();
         await tx.wait();
-        document.getElementById("status").innerText = "✅ Successfully claimed!";
-      } catch (err) {
-        console.error(err);
-        document.getElementById("status").innerText = "❌ Error: " + (err.reason || err.message);
+        alert("Claimed!");
+        updateClaimable();
+      } catch (e) {
+        alert("Error: " + e.message);
       }
     }
+
+    document.getElementById('connect').onclick = connectWallet;
+    document.getElementById('claim').onclick = claim;
   </script>
 </body>
 </html>
